@@ -20,7 +20,7 @@ class MT_RNN_dp(nn.Module):
             self.rnn = nn.LSTM(input_dim, hidden_dim, batch_first=True, bidirectional=bidirectional,
                                  num_layers=num_layers)
         elif rnn_type == "GRU":
-            self.rnn = nn.GRU(input_dim, hidden_dim, batch_first=True, bidirectional=bidirectional,
+            self.overlap = nn.GRU(input_dim, hidden_dim, batch_first=True, bidirectional=bidirectional,
                                  num_layers=num_layers)
         else:
             raise NotImplemented

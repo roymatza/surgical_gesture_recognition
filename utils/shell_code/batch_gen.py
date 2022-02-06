@@ -257,6 +257,7 @@ class BatchGenerator(object):
 
 
             return batch_input_tensor, batch_target_tensor_left ,batch_target_tensor_right,batch_target_tensor_gestures, mask
+    
     ##### this is supports one and two heads#############
 
     def next_batch_backup(self, batch_size):
