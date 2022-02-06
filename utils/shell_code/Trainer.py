@@ -57,19 +57,42 @@ class Trainer:
             total1 = 0
 
             while batch_gen.has_next():
-                batch_input, batch_target_gestures, mask = batch_gen.next_batch(batch_size)
-                batch_input, batch_target_gestures, mask = batch_input.to(self.device), batch_target_gestures.to(
-                    self.device), mask.to(self.device)
+                if self.task == 'gestures':
+                    batch_input, batch_target_gestures, mask = batch_gen.next_batch(batch_size)
+                    batch_input, batch_target_gestures, mask = batch_input.to(self.device), batch_target_gestures.to(
+                        self.device), mask.to(self.device)
+                elif self.task == 'multi-task':
+                    # print('multi-task training')
+                    # .next_batch gives: batch_input_tensor, batch_target_tensor_left ,batch_target_tensor_right,batch_target_tensor_gestures, mask
+                    batch_input, batch_target_left,\
+                    batch_target_right, batch_target_gestures, mask, mask_l, mask_r = batch_gen.next_batch(batch_size)
+                    batch_input, batch_target_left ,batch_target_right, batch_target_gestures, mask, mask_l, mask_r =\
+                        batch_input.to(self.device), batch_target_left.to(self.device),\
+                        batch_target_right.to(self.device),\
+                        batch_target_gestures.to(self.device), mask.to(self.device), mask_l.to(self.device), mask_r.to(self.device)
 
                 optimizer.zero_grad()
                 lengths = torch.sum(mask[:, 0, :], dim=1).to(dtype=torch.int64).to(device='cpu')
                 predictions1 = self.model(batch_input, lengths)
+                if self.task == 'multi-task':
+                    predictions_left = (predictions1[1] * mask_l).unsqueeze_(0)
+                    predictions_right = (predictions1[2] * mask_r).unsqueeze_(0)
                 predictions1 = (predictions1[0] * mask).unsqueeze_(0)
 
                 loss = 0
-                for p in predictions1:
-                    loss += self.ce(p.transpose(2, 1).contiguous().view(-1, self.num_classes_list[0]),
-                                    batch_target_gestures.view(-1))
+                if self.task == 'gestures':
+                    for p in predictions1:
+                        loss += self.ce(p.transpose(2, 1).contiguous().view(-1, self.num_classes_list[0]),
+                                        batch_target_gestures.view(-1))
+                elif self.task == 'multi-task':
+                    for p, p_l, p_r in zip(predictions1, predictions_left, predictions_right):
+                        ALPHA = 0.2
+                        loss += (1-2*ALPHA) * self.ce(p.transpose(2, 1).contiguous().view(-1, self.num_classes_list[0]),
+                                        batch_target_gestures.view(-1))
+                        loss += ALPHA * self.ce(p_l.transpose(2, 1).contiguous().view(-1, self.num_classes_list[1]),
+                                        batch_target_left.view(-1))
+                        loss += ALPHA * self.ce(p_r.transpose(2, 1).contiguous().view(-1, self.num_classes_list[2]),
+                                        batch_target_right.view(-1))
 
 
                 epoch_loss += loss.item()

@@ -163,7 +163,7 @@ class BatchGenerator(object):
 
                 batch_target_left.append(classes_left[::self.sample_rate])
 
-            elif self.task == "multi-taks":
+            elif self.task == "multi-task":
                 file_ptr = open(self.gt_path_gestures + seq.split('.')[0] + '.txt', 'r')
                 gt_source = file_ptr.read().split('\n')[:-1]
                 content = self.pars_ground_truth(gt_source)
@@ -230,13 +230,14 @@ class BatchGenerator(object):
 
             return batch_input_tensor, batch_target_tensor_left ,batch_target_tensor_right, mask
 
-        elif self.task == "multi-taks":
+        elif self.task == "multi-task":
             length_of_sequences_left = np.expand_dims(np.array( list(map(len, batch_target_left))),1)
             length_of_sequences_right = np.expand_dims(np.array( list(map(len, batch_target_right))),1)
             length_of_sequences_gestures = np.expand_dims(np.array( list(map(len, batch_target_gestures))),1)
 
 
-            length_of_sequences = list(np.min(np.concatenate((length_of_sequences_left, length_of_sequences_right,length_of_sequences_gestures),1),1))
+            # length_of_sequences = list(np.min(np.concatenate((length_of_sequences_left, length_of_sequences_right,length_of_sequences_gestures),1),1))
+            length_of_sequences = list(np.max(np.concatenate((length_of_sequences_left, length_of_sequences_right,length_of_sequences_gestures),1),1))
 
             batch_input_tensor = torch.zeros(len(batch_input), np.shape(batch_input[0])[0],
                                              max(length_of_sequences), dtype=torch.float)
@@ -246,6 +247,8 @@ class BatchGenerator(object):
             batch_target_tensor_gestures = torch.ones(len(batch_input), max(length_of_sequences), dtype=torch.long)*(-100)
 
             mask = torch.zeros(len(batch_input), self.num_classes_gestures, max(length_of_sequences), dtype=torch.float)
+            mask_l = torch.zeros(len(batch_target_left), self.num_classes_tools, max(length_of_sequences), dtype=torch.float)  # todo new
+            mask_r = torch.zeros(len(batch_target_right), self.num_classes_tools, max(length_of_sequences), dtype=torch.float)  # todo new
 
 
             for i in range(len(batch_input)):
@@ -253,11 +256,16 @@ class BatchGenerator(object):
                 batch_target_tensor_left[i, :np.shape(batch_target_left[i])[0]] = torch.from_numpy(batch_target_left[i][:batch_target_tensor_left.shape[1]])
                 batch_target_tensor_right[i, :np.shape(batch_target_right[i])[0]] = torch.from_numpy(batch_target_right[i][:batch_target_tensor_right.shape[1]])
                 batch_target_tensor_gestures[i, :np.shape(batch_target_gestures[i])[0]] = torch.from_numpy(batch_target_gestures[i][:batch_target_tensor_gestures.shape[1]])
-                # mask[i, :, :np.shape(batch_target_gestures[i])[0]] = torch.ones(self.num_classes_gestures, np.shape(batch_target_gestures[i])[0])
+                # assert (np.shape(batch_target_gestures[i])[0]<=mask.shape[2])
+                # print(np.shape(batch_target_gestures[i])[0])
+                # print(mask.shape[2])
+                mask[i, :, :np.shape(batch_target_gestures[i])[0]] = torch.ones(self.num_classes_gestures, np.shape(batch_target_gestures[i])[0])  # todo originally hidden
+                # mask[i, :, :np.shape(batch_target_gestures[i])[0]] = torch.ones(self.num_classes_gestures, min(np.shape(batch_target_gestures[i])[0],mask.shape[2]))  # todo new
+                mask_l[i, :, :np.shape(batch_target_left[i])[0]] = torch.ones(self.num_classes_tools, np.shape(batch_target_left[i])[0])  # todo new
+                mask_r[i, :, :np.shape(batch_target_right[i])[0]] = torch.ones(self.num_classes_tools, np.shape(batch_target_right[i])[0])  # todo new
 
 
-            return batch_input_tensor, batch_target_tensor_left ,batch_target_tensor_right,batch_target_tensor_gestures, mask
-    
+            return batch_input_tensor, batch_target_tensor_left ,batch_target_tensor_right,batch_target_tensor_gestures, mask, mask_l, mask_r
     ##### this is supports one and two heads#############
 
     def next_batch_backup(self, batch_size):

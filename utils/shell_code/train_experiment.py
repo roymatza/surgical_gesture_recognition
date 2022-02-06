@@ -8,13 +8,14 @@ import argparse
 import pandas as pd
 from datetime import datetime
 from termcolor import colored, cprint
+import numpy as np
 import random
 
 dt_string = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset',choices=['APAS'], default="APAS")
-parser.add_argument('--task',choices=['gestures'], default="gestures")
+parser.add_argument('--task',choices=['gestures', 'multi-task'], default="gestures")
 parser.add_argument('--network',choices=['LSTM','GRU'], default="LSTM")
 parser.add_argument('--split',choices=['0', '1', '2', '3','4', 'all'], default='all')
 parser.add_argument('--features_dim', default='36', type=int)
@@ -77,7 +78,7 @@ lr = args.lr
 offline_mode = args.offline_mode
 experiment_name = args.group +" task:"  + args.task + " splits: " + args.split +" net: " + args.network + " is Offline: " + str(args.offline_mode)
 args.group = experiment_name
-print(colored(experiment_name, "green"))
+# print(colored(experiment_name, "green"))
 
 
 summaries_dir = "./summaries/" + args.dataset + "/" + experiment_name
@@ -125,7 +126,11 @@ for split_num in list_of_splits:
         num_classes_tools = len(actions_dict_tools)
 
     num_classes_gestures = len(actions_dict_gestures)
-    num_classes_list = [num_classes_gestures]
+    if args.task == 'gestures':
+        num_classes_list = [num_classes_gestures]
+    elif args.task == 'multi-task':
+        num_classes_list = [num_classes_gestures, num_classes_tools, num_classes_tools]
+        print(num_classes_list)
 
     trainer = Trainer(features_dim, num_classes_list,hidden_dim=hidden_dim,dropout=dropout,num_layers=num_layers, offline_mode=offline_mode,task=args.task,device=device,network=args.network,debagging=debagging)
 
