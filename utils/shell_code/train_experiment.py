@@ -90,19 +90,21 @@ if not debagging:
 full_eval_results = pd.DataFrame()
 full_train_results = pd.DataFrame()
 
+#root_path = "/datashare/"
+root_path = "/home/roym/code/surgical_gesrec/data/datashare/"
 for split_num in list_of_splits:
     print("split number: " + str(split_num))
     args.split = str(split_num)
 
-    folds_folder = "/datashare/"+args.dataset+"/folds"
-    features_path = "/datashare/"+args.dataset+"/kinematics_npy/"
+    folds_folder = root_path+args.dataset+"/folds"
+    features_path = root_path+args.dataset+"/kinematics_npy/"
 
-    gt_path_gestures = "/datashare/"+args.dataset+"/transcriptions_gestures/"
-    gt_path_tools_left = "/datashare/"+args.dataset+"/transcriptions_tools_left/"
-    gt_path_tools_right = "/datashare/"+args.dataset+"/transcriptions_tools_right/"
+    gt_path_gestures = root_path+args.dataset+"/transcriptions_gestures/"
+    gt_path_tools_left = root_path+args.dataset+"/transcriptions_tools_left/"
+    gt_path_tools_right = root_path+args.dataset+"/transcriptions_tools_right/"
 
-    mapping_gestures_file = "/datashare/"+args.dataset+"/mapping_gestures.txt"
-    mapping_tool_file = "/datashare/"+args.dataset+"/mapping_tools.txt"
+    mapping_gestures_file = root_path+args.dataset+"/mapping_gestures.txt"
+    mapping_tool_file = root_path+args.dataset+"/mapping_tools.txt"
 
     model_dir = "./models/"+args.dataset+"/"+ experiment_name+"/split_"+args.split
     if not debagging:
