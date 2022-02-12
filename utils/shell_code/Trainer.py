@@ -18,9 +18,11 @@ class Trainer:
     def __init__(self, dim, num_classes_list,hidden_dim=64,dropout=0.4,num_layers=3, offline_mode=True, task="gestures", device="cuda",
                  network='LSTM',debagging=False):
 
-        self.model = MT_RNN_dp(network, input_dim=dim, hidden_dim=hidden_dim, num_classes_list=num_classes_list,
+        # self.model = MT_RNN_dp(network, input_dim=dim, hidden_dim=hidden_dim, num_classes_list=num_classes_list,
+        #                     bidirectional=offline_mode, dropout=dropout,num_layers=num_layers)
+        
+        self.model = MT_RNN_SlowFast('GRU', input_dim=dim, hidden_dim=hidden_dim, num_classes_list=num_classes_list,
                             bidirectional=offline_mode, dropout=dropout,num_layers=num_layers)
-
 
         self.debagging =debagging
         self.network = network

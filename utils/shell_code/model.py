@@ -43,7 +43,7 @@ class MT_RNN_SlowFast(nn.Module):
         unpacked_rnn_out1, unpacked_rnn_out_lengths1 = torch.nn.utils.rnn.pad_packed_sequence(rnn_output1, padding_value=-1, batch_first=True)
         unpacked_rnn_out2, unpacked_rnn_out_lengths2 = torch.nn.utils.rnn.pad_packed_sequence(rnn_output2, padding_value=-1, batch_first=True)
 
-        unpacked_rnn_out = torch.cat(unpacked_rnn_out1, unpacked_rnn_out2)
+        unpacked_rnn_out = torch.cat((unpacked_rnn_out1, unpacked_rnn_out2), dim=-1)
 
         # flat_X = torch.cat([unpacked_ltsm_out[i, :lengths[i], :] for i in range(len(lengths))])
         unpacked_rnn_out = self.dropout(unpacked_rnn_out)
