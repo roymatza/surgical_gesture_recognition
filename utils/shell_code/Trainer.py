@@ -9,7 +9,7 @@ import pandas as pd
 from termcolor import colored, cprint
 
 from metrics import*
-#import wandb
+import wandb
 from datetime import datetime
 import tqdm
 
@@ -22,14 +22,14 @@ class Trainer:
         #                     bidirectional=offline_mode, dropout=dropout,num_layers=num_layers)
         
         self.model = MT_RNN_SlowFast('GRU', input_dim=dim, hidden_dim=hidden_dim, num_classes_list=num_classes_list,
-                            bidirectional=offline_mode, dropout=dropout,num_layers=num_layers)
+                            bidirectional=offline_mode, dropout=dropout,num_layers=num_layers, freq=[2,1])
 
         self.debagging =debagging
         self.network = network
         self.device = device
         self.ce = nn.CrossEntropyLoss(ignore_index=-100)
         self.num_classes_list = num_classes_list
-        self.task =task
+        self.task = task
 
 
     def train(self, save_dir, batch_gen, num_epochs, batch_size, learning_rate, eval_dict, args):
