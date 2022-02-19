@@ -22,7 +22,7 @@ class Trainer:
         #                     bidirectional=offline_mode, dropout=dropout,num_layers=num_layers)
         
         self.model = MT_RNN_SlowFast('GRU', input_dim=dim, hidden_dim=hidden_dim, num_classes_list=num_classes_list,
-                            bidirectional=offline_mode, dropout=dropout,num_layers=num_layers, freq=[2,1])
+                            bidirectional=offline_mode, dropout=dropout,num_layers=num_layers, freq=[1,2])
 
         self.debagging =debagging
         self.network = network

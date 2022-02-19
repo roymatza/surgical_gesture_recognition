@@ -1,4 +1,5 @@
 #Created by Adam Goldbraikh - Scalpel Lab Technion
+from numpy import dtype
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -60,19 +61,24 @@ class MT_RNN_SlowFast(nn.Module):
                 
                 layer_output, _ = curr_layer(layer_outputs[i])
                 layer_outputs[i] = layer_output
-                #if self.fusion and i>0:
-                        #layer_outputs.append(self.fuse_outputs(layer_outputs[i], layer_outputs[i-1]))
+                if self.fusion and i>0:
+                    fast_output = layer_outputs[i-1] #if layer_outputs[i].data.shape[1] > layer_outputs[i-1].data.shape[1] else layer_outputs[i-1]
+                    slow_output = layer_outputs[i] #if layer_outputs[i].data.shape[1] <= layer_outputs[i-1].data.shape[1] else layer_outputs[i-1]
+                    lengths_slow_output = torch.ceil(lengths / self.frequencies[i])
+                    
+                    #update slow path
+                    layer_outputs[i] = self.fuse_outputs(slow_output, fast_output, lengths_slow_output)
         
         #upsampling the processed sequences
         for l_i, l_out  in enumerate(layer_outputs):
             layer_outputs[l_i] = self.create_unpacked_upsampled_output(l_out, self.frequencies[l_i], seq_length=rnn_inpus.shape[1])
 
-        #concatenating final result
-        unpacked_rnn_out = torch.cat(layer_outputs, dim=1)
+        #concatenating final result (channel dimension)
+        unpacked_rnn_out = torch.cat(layer_outputs, dim=-1)
         
         unpacked_rnn_out = self.dropout(unpacked_rnn_out)
         for output_head in self.output_heads:
-            outputs.append(output_head(unpacked_rnn_out.permute(0, 2, 1)).permute(0, 2, 1))
+            outputs.append(output_head(unpacked_rnn_out).permute(0,2,1))
         return outputs
         
     def create_packed_sampled_input(self, input, sample_ratio, seq_lengths):
@@ -87,23 +93,33 @@ class MT_RNN_SlowFast(nn.Module):
         '''creating the output in an unpacked manner, upsampled to the original frequency'''
         unpacked_output, _ = torch.nn.utils.rnn.pad_packed_sequence(output, padding_value=-1, batch_first=True)
         upsample = nn.Upsample(scale_factor=upsample_ratio)
-        output_upsampled = upsample(unpacked_output.permute(0, 2, 1))
-        return output_upsampled[:, :, :seq_length]
+        output_upsampled = upsample(unpacked_output.permute(0, 2, 1)).permute(0,2,1)
+        return output_upsampled[:, :seq_length, :]
          
         
-    def fuse_outputs(self, out_small, out_large, sample_ratio, method='sample', op='cat'):
+    def fuse_outputs(self, out_small, out_large, seq_lengths_small, method='sample', op='cat'):
         '''Applying fusion of two different output tensors, by whether summation or concatenation'''
         '''Assuming input of shape NxSxD, where N is batchsize, S is sequence length and D is the hidden dimension'''
-
+        
+        #unpack and pad tensors
+        out_small, _ = torch.nn.utils.rnn.pad_packed_sequence(out_small, padding_value=-1, batch_first=True)
+        out_large, _ = torch.nn.utils.rnn.pad_packed_sequence(out_large, padding_value=-1, batch_first=True)
+        
+        #modify tensors for fusion
         if method=='time2channel':
+            #WARNING: changes number of output channels
             out_modified = out_large.view(out_large.shape[0],out_small.shape[1],-1)
         if method=='sample':
-            out_modified = out_large[:,::sample_ratio,:]
+            sample_ratio = torch.ceil(torch.Tensor([out_large.shape[1]/out_small.shape[1]])).to(dtype=torch.long)
+            out_modified = out_large[:,::sample_ratio,:] #now small and large tensors has the same sequence length
 
+        #apply fusion operation
         if op=='cat':
-            return torch.cat(out_modified,out_small,dim=1)
+            result= torch.cat((out_modified,out_small),dim=1)
         if op=='sum':
-            return out_modified+out_small
+            result= out_modified+out_small
+        
+        return torch.nn.utils.rnn.pack_padded_sequence(result, seq_lengths_small, batch_first=True, enforce_sorted=False)
 
 
 
