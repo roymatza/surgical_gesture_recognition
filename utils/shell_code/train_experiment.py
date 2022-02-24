@@ -16,18 +16,20 @@ dt_string = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset',choices=['APAS'], default="APAS")
 parser.add_argument('--task',choices=['gestures', 'multi-task'], default="gestures")
-parser.add_argument('--network',choices=['LSTM','GRU'], default="LSTM")
-parser.add_argument('--split',choices=['0', '1', '2', '3','4', 'all'], default='all')
+parser.add_argument('--network',choices=['LSTM','GRU'], default="GRU")
+parser.add_argument('--split',choices=['0', '1', '2', '3','4', 'all'], default='0')
 parser.add_argument('--features_dim', default='36', type=int)
 parser.add_argument('--lr', default=0.00316227766, type=float)
 parser.add_argument('--num_epochs', default=40, type=int)
 parser.add_argument('--eval_rate', default=1, type=int)
+parser.add_argument('--sample_rate', default=6, type=int)
 parser.add_argument('--batch_size',default =5, type=int )
 
 parser.add_argument('--dropout', default=0.4, type=float)
 parser.add_argument('--num_layers',default =3, type=int )
 parser.add_argument('--hidden_dim',default =64, type=int )
-
+parser.add_argument('--hidden_dim_ratio', default=0.5, type=int)
+parser.add_argument('--skip_freq', default=2, type=int)
 
 parser.add_argument('--normalization', choices=['none'], default='none', type=str)
 parser.add_argument('--offline_mode', default=True, type=bool)
@@ -42,7 +44,8 @@ args = parser.parse_args()
 debagging = args.debagging
 if debagging:
     args.upload = False
-sample_rate = 6  # downsample the frequency to 5Hz
+#sample_rate = 1  # downsample the frequency to 5Hz
+
 bz = args.batch_size
 
 
@@ -68,6 +71,8 @@ elif args.dataset == "APAS":
     list_of_splits = list(range(0,5))
 else:
     raise NotImplemented
+
+sample_rate = args.sample_rate
 dropout = args.dropout
 num_layers =args.num_layers
 hidden_dim = args.hidden_dim
@@ -81,6 +86,10 @@ args.group = experiment_name
 # print(colored(experiment_name, "green"))
 
 
+#create lists for sample_ratio and hidden_dim ratio
+hidden_dim_ratio = [1, args.hidden_dim_ratio]
+freq = [1, args.skip_freq]
+
 summaries_dir = "./summaries/" + args.dataset + "/" + experiment_name
 if not debagging:
     if not os.path.exists(summaries_dir):
@@ -90,8 +99,8 @@ if not debagging:
 full_eval_results = pd.DataFrame()
 full_train_results = pd.DataFrame()
 
-#root_path = "/datashare/"
-root_path = "/home/roym/code/surgical_gesrec/data/datashare/"
+root_path = "/datashare/"
+# root_path = "C:/Users/Yael/PycharmProjects/surgical_gesrec/utils/datashare_kinematics/"
 for split_num in list_of_splits:
     print("split number: " + str(split_num))
     args.split = str(split_num)
@@ -134,7 +143,7 @@ for split_num in list_of_splits:
         num_classes_list = [num_classes_gestures, num_classes_tools, num_classes_tools]
         print(num_classes_list)
 
-    trainer = Trainer(features_dim, num_classes_list,hidden_dim=hidden_dim,dropout=dropout,num_layers=num_layers, offline_mode=offline_mode,task=args.task,device=device,network=args.network,debagging=debagging)
+    trainer = Trainer(features_dim, num_classes_list,hidden_dim=hidden_dim,dropout=dropout,num_layers=num_layers, offline_mode=offline_mode,task=args.task,device=device,network=args.network,debagging=debagging, freq=freq, hidden_dim_ratio=hidden_dim_ratio)
 
     batch_gen = BatchGenerator(num_classes_gestures,num_classes_tools, actions_dict_gestures,actions_dict_tools,features_path,split_num,folds_folder,gt_path_gestures, gt_path_tools_left, gt_path_tools_right, sample_rate=sample_rate,normalization=args.normalization,task=args.task)
     eval_dict ={"features_path":features_path,"actions_dict_gestures": actions_dict_gestures, "actions_dict_tools":actions_dict_tools, "device":device, "sample_rate":sample_rate,"eval_rate":eval_rate,
