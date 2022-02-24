@@ -1,6 +1,7 @@
 #Created by Adam Goldbraikh - Scalpel Lab Technion
 # parts of the code were adapted from: https://github.com/sj-li/MS-TCN2?utm_source=catalyzex.com
 
+from unittest import result
 from model import *
 import sys
 from torch import optim
@@ -131,14 +132,14 @@ class Trainer:
             if (epoch) % eval_rate == 0:
                 print(colored("epoch: " + str(epoch + 1) + " model evaluation", 'red', attrs=['bold']))
                 results = {"epoch": epoch}
-                results.update(self.evaluate(eval_dict, batch_gen))
+                results.update(self.evaluate(eval_dict, batch_gen, args))
                 eval_results_list.append(results)
                 if args.upload is True:
                     wandb.log(results)
 
         return eval_results_list, train_results_list
 
-    def evaluate(self, eval_dict, batch_gen):
+    def evaluate(self, eval_dict, batch_gen, args):
         results = {}
         device = eval_dict["device"]
         features_path = eval_dict["features_path"]
@@ -179,11 +180,15 @@ class Trainer:
                                              recognition_list=recognition1_list, list_of_videos=list_of_vids,
                                              suffix="gesture")
             results.update(results1)
-
+            
+            #Adding metrics explicitly for sweeps
+            wandb.init(project=args.project)
+            wandb.log({"Acc gesture":results["Acc gesture"]})
+            wandb.log({"Edit gesture":results["Edit gesture"]})
+            wandb.log({"F1-macro gesture":results["F1-macro gesture"]})
+            wandb.log({"F1@10 gesture":results["F1@10 gesture"]})
+            wandb.log({"F1@25 gesture":results["F1@25 gesture"]})
+            wandb.log({"F1@50 gesture":results["F1@50 gesture"]})
 
             self.model.train()
             return results
-
-
-
-

@@ -99,8 +99,8 @@ if not debagging:
 full_eval_results = pd.DataFrame()
 full_train_results = pd.DataFrame()
 
-root_path = "/datashare/"
-# root_path = "C:/Users/Yael/PycharmProjects/surgical_gesrec/utils/datashare_kinematics/"
+#root_path = "/datashare/"
+root_path = "/home/roym/code/surgical_gesrec/data/datashare/"
 for split_num in list_of_splits:
     print("split number: " + str(split_num))
     args.split = str(split_num)
