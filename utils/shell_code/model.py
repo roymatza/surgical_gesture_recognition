@@ -7,7 +7,8 @@ import copy
 from torch.nn.utils.rnn import pack_padded_sequence
 
 class MT_RNN_SlowFast(nn.Module):
-    def __init__(self, rnn_type, input_dim, hidden_dim, num_classes_list, bidirectional, dropout, num_layers=2, freq=[1,2]):
+    def __init__(self, rnn_type, input_dim, hidden_dim, num_classes_list, bidirectional, dropout, num_layers=2,
+                 freq=[1,2], hidden_dim_ratio=None):
         super(MT_RNN_SlowFast, self).__init__()
 
         assert len(freq) >= 1
@@ -18,13 +19,22 @@ class MT_RNN_SlowFast(nn.Module):
         self.num_freqs = len(freq)
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
-        self.fusion = True
+        self.fusion = False#True
         self.dropout = torch.nn.Dropout(dropout)
+
+        if hidden_dim_ratio == None:
+            self.hidden_dim_ratio = [1] * self.num_freqs
+        else:
+            assert len(hidden_dim_ratio) == self.num_freqs
+            self.hidden_dim_ratio = hidden_dim_ratio
+        self.hidden_dims = [int(hidden_dim * freqs_hidden_dim_ratio) for freqs_hidden_dim_ratio in self.hidden_dim_ratio]
+
         if rnn_type == "GRU":
-            for freq in self.frequencies:
+            for freq, hidden_d in zip(self.frequencies, self.hidden_dims):
                 GRU_list = []
                 #Seperation of layers
-                dims = [input_dim // 2 if bidirectional else input_dim] + [hidden_dim for layer_i in range(num_layers)]
+                dims = [input_dim // 2 if bidirectional else input_dim]\
+                       + [hidden_d for layer_i in range(num_layers)]
                 for in_dim, out_dim in zip(dims[:-1], dims[1:]):
                     # print((in_dim * 2 if bidirectional else in_dim, out_dim))
                     GRU_list.append(
@@ -37,8 +47,11 @@ class MT_RNN_SlowFast(nn.Module):
         else:
             raise NotImplemented
         # The linear layer that maps from hidden state space to tag space
+        # self.output_heads = nn.ModuleList([copy.deepcopy(
+        #     nn.Linear(hidden_dim * 2*self.num_freqs if bidirectional else hidden_dim * self.num_freqs, num_classes_list[s]) )
+        #                             for s in range(len(num_classes_list))])
         self.output_heads = nn.ModuleList([copy.deepcopy(
-            nn.Linear(hidden_dim * 2*self.num_freqs if bidirectional else hidden_dim * self.num_freqs, num_classes_list[s]) )
+            nn.Linear(sum(self.hidden_dims) * 2 if bidirectional else sum(self.hidden_dims), num_classes_list[s]) )
                                     for s in range(len(num_classes_list))])
 
     def forward(self, rnn_inpus, lengths):
