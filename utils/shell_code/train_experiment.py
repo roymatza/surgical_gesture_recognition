@@ -30,8 +30,10 @@ parser.add_argument('--num_layers',default =3, type=int )
 parser.add_argument('--hidden_dim',default =64, type=int )
 parser.add_argument('--hidden_dim_ratio', default=0.5, type=int)
 parser.add_argument('--skip_freq', default=2, type=int)
+parser.add_argument('--alpha', default=0., type=float)
 
-parser.add_argument('--normalization', choices=['none'], default='none', type=str)
+
+parser.add_argument('--normalization', choices=['none', 'samplewise_SD', 'Standard', "Min-max"], default='none', type=str)
 parser.add_argument('--offline_mode', default=True, type=bool)
 parser.add_argument('--project', default=" project name ", type=str)
 parser.add_argument('--group', default=dt_string + " group ", type=str)
@@ -99,8 +101,9 @@ if not debagging:
 full_eval_results = pd.DataFrame()
 full_train_results = pd.DataFrame()
 
+alpha = args.alpha
 #root_path = "/datashare/"
-root_path = "/home/roym/code/surgical_gesrec/data/datashare/"
+root_path = "/DS/sd_conv/SdConv/datashare/"
 for split_num in list_of_splits:
     print("split number: " + str(split_num))
     args.split = str(split_num)
@@ -143,7 +146,7 @@ for split_num in list_of_splits:
         num_classes_list = [num_classes_gestures, num_classes_tools, num_classes_tools]
         print(num_classes_list)
 
-    trainer = Trainer(features_dim, num_classes_list,hidden_dim=hidden_dim,dropout=dropout,num_layers=num_layers, offline_mode=offline_mode,task=args.task,device=device,network=args.network,debagging=debagging, freq=freq, hidden_dim_ratio=hidden_dim_ratio)
+    trainer = Trainer(features_dim, num_classes_list,hidden_dim=hidden_dim,dropout=dropout,num_layers=num_layers, offline_mode=offline_mode,task=args.task,device=device,network=args.network,debagging=debagging, freq=freq, hidden_dim_ratio=hidden_dim_ratio, alpha=alpha)
 
     batch_gen = BatchGenerator(num_classes_gestures,num_classes_tools, actions_dict_gestures,actions_dict_tools,features_path,split_num,folds_folder,gt_path_gestures, gt_path_tools_left, gt_path_tools_right, sample_rate=sample_rate,normalization=args.normalization,task=args.task)
     eval_dict ={"features_path":features_path,"actions_dict_gestures": actions_dict_gestures, "actions_dict_tools":actions_dict_tools, "device":device, "sample_rate":sample_rate,"eval_rate":eval_rate,

@@ -17,7 +17,7 @@ import tqdm
 
 class Trainer:
     def __init__(self, dim, num_classes_list,hidden_dim=64,dropout=0.4,num_layers=3, offline_mode=True, task="gestures", device="cuda",
-                 network='GRU',debagging=False, freq=[1,2], hidden_dim_ratio=None):
+                 network='GRU',debagging=False, freq=[1,2], hidden_dim_ratio=None, alpha=0.):
 
         # self.model = MT_RNN_dp(network, input_dim=dim, hidden_dim=hidden_dim, num_classes_list=num_classes_list,
         #                     bidirectional=offline_mode, dropout=dropout,num_layers=num_layers)
@@ -31,6 +31,8 @@ class Trainer:
         self.ce = nn.CrossEntropyLoss(ignore_index=-100)
         self.num_classes_list = num_classes_list
         self.task = task
+
+        self.alpha = alpha
 
 
     def train(self, save_dir, batch_gen, num_epochs, batch_size, learning_rate, eval_dict, args):
@@ -89,12 +91,11 @@ class Trainer:
                                         batch_target_gestures.view(-1))
                 elif self.task == 'multi-task':
                     for p, p_l, p_r in zip(predictions1, predictions_left, predictions_right):
-                        ALPHA = 0.2
-                        loss += (1-2*ALPHA) * self.ce(p.transpose(2, 1).contiguous().view(-1, self.num_classes_list[0]),
+                        loss += (1-2*self.alpha) * self.ce(p.transpose(2, 1).contiguous().view(-1, self.num_classes_list[0]),
                                         batch_target_gestures.view(-1))
-                        loss += ALPHA * self.ce(p_l.transpose(2, 1).contiguous().view(-1, self.num_classes_list[1]),
+                        loss += self.alpha * self.ce(p_l.transpose(2, 1).contiguous().view(-1, self.num_classes_list[1]),
                                         batch_target_left.view(-1))
-                        loss += ALPHA * self.ce(p_r.transpose(2, 1).contiguous().view(-1, self.num_classes_list[2]),
+                        loss += self.alpha * self.ce(p_r.transpose(2, 1).contiguous().view(-1, self.num_classes_list[2]),
                                         batch_target_right.view(-1))
 
 
